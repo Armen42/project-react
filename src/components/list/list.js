@@ -1,102 +1,89 @@
-import React from "react"
-import {API_URL} from '../../config'
-import {handleReasponse} from '../../helpers'
-import './table.css'
+import React from 'react';
+import { API_URL } from '../../config';
+import { handleResponse } from '../../helpers.js';
+import Pagination from './Pagination';
+import Loading from '../common/Loading';
+import Table from './Table';
 
+class List extends React.Component {
+  constructor() {
+    super();
 
-class List extends React.Component{
-    constructor(){
-        super()
-        this.state={
-          
-            loading : false,
-            currencies : [],
-            error:''
-        }
-    }
+    this.state = {
+      page: 1,
+      totalPages: 0,
+      perPage: 20,
+      currencies: [],
+      loading: false,
+      error: '',
+    };
 
-    componentDidMount(){
-
-      this.setState({
-        loading : true
-        
-      })
-    
-
-      
-      fetch(`${API_URL}/cryptocurrencies?page=1&perPage=20`)  
-      .then(handleReasponse)
-      .then(data=>{
-        
-        this.setState({
-          currencies: data.currencies,
-          loading :false
-      })
-    })
-      .catch(error=>{
-        
-        this.setState({
-          error:error.errorMessage,
-          loading:false
-        })
-        
-        
-      })
-
-    }
-
-    renderChangePercent(percent){
-      if(percent>0){
-        return <span className="percent-raised">{percent}% &uarr;</span>
-      }
-      else if(percent<0){
-        return(<span className="percent-fallen">{percent}% &darr;</span>)
-      }
-      else{
-        return <span>0</span>
-      }
-    }
-    render(){
-console.log(this.state.currencies)
-        if(this.state.loding){
-          
-          return(
-            <div>loading</div>
-          )
-        }
-        if(this.state.error){
-          return(<div>{this.state.error}</div>)
-        }
-        
-
-        return(
-          <div className="Table-container">
-            <table className="Table">
-                <thead className="Table-head">
-                    <tr>
-                      <th>Cryptocurrency</th>
-                      <th>Price</th>
-                      <th>Market Cap</th>
-                      <th>25H chnage</th>
-                    </tr>
-                </thead>
-                <tbody className="Table-body ">
-                    {this.state.currencies.map(currency=>(
-                      <tr key ={currency.id}>
-                        <td><span className="Table-rank">{currency.rank}</span>{currency.name}</td>
-                        <td><span className="Table-dollar">$</span>{currency.price}</td>
-                        <td ><span className="Table-dollar">$</span>{currency.marketCap}</td>
-                        <td >{this.renderChangePercent(currency.percentChange24h)}</td>
-                      </tr>
-                    ))}
-                </tbody>
-            </table>
-          </div>
-        )
-    }
+    this.handlePaginationClick = this.handlePaginationClick.bind(this);
   }
 
-export default List
+  componentWillMount() {
+    this.fetchCurrencies();
+  }
 
+  fetchCurrencies() {
+    const { page, perPage } = this.state;
 
+    this.setState({ loading: true });
 
+    fetch(`${API_URL}/cryptocurrencies/?page=${page}&perPage=${perPage}`)
+      .then(handleResponse)
+      .then((data) => {
+        const { totalPages, currencies } = data;
+
+        this.setState({
+          currencies,
+          totalPages,
+          error: '',
+          loading: false,
+        });
+      })
+      .catch((error) => {
+        this.setState({
+          error: error.errorMessage,
+          loading: false,
+        });
+      });
+  }
+
+  handlePaginationClick(direction) {
+    let nextPage = this.state.page;
+
+    nextPage = direction === 'next' ? nextPage + 1 : nextPage - 1;
+
+   
+    this.setState({ page: nextPage }, () => {
+      this.fetchCurrencies();
+    });
+  }
+
+  render() {
+    const { currencies, loading, error, page, totalPages } = this.state;
+
+    if (loading) {
+      return <div className="loading-container"><Loading /></div>
+    }
+
+    if (error) {
+      return <div className="error">{error}</div>
+    }
+
+    return (
+      <div>
+        <Table currencies={currencies} />
+
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          handlePaginationClick={this.handlePaginationClick}
+        />
+      </div>
+    );
+  }
+}
+
+export default List;
